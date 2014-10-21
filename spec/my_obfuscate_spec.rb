@@ -390,6 +390,153 @@ COPY some_table_to_keep (a, b) FROM stdin;
         end
       end
     end
+
+    describe "when using CSV", focus: true do
+      context "when processing a csv file without a header row" do
+        it "aborts processing" do
+          ddo = MyObfuscate.new
+          ddo.database_type = :csv
+          ddo.csv_headers = false
+
+          string = "col1,col2,col3\n"
+          input = StringIO.new(string)
+          output = StringIO.new
+          expect {
+            ddo.obfuscate(input, output)
+          }.to raise_error(Exception)
+        end
+      end
+
+      context "when there is nothing to obfuscate" do
+        it "returns the input data" do
+          ddo = MyObfuscate.new
+          ddo.database_type = :csv
+          ddo.csv_headers = true
+
+          header = "col1,col2,col3\n"
+          row = "val1,val2,val3\n"
+          string = header + row
+          input = StringIO.new(string)
+          output = StringIO.new
+          ddo.obfuscate(input, output)
+          output.rewind
+          expect(output.read).to eq(string)
+        end
+      end
+
+      context "when obfuscating a column without matching" do
+        before do
+          @ddo = MyObfuscate.new({
+            csv: {
+              "col1" => {:type => :string, :length => 8}
+            }
+          })
+          @ddo.database_type = :csv
+        end
+
+        it "creates a new value for each row's column" do
+          header = "col1\n"
+          row1 = "r1c1\n"
+          row2 = "r2c1\n"
+          string = header + row1 + row2
+
+          input = StringIO.new(string)
+          output = StringIO.new
+          @ddo.obfuscate(input, output)
+          output.rewind
+
+          header_out, row1_out, row2_out = output.read.split
+          expect(header_out).to eq(header.strip)
+          expect(row1_out).not_to match(/#{row1.strip}/)
+          expect(row2_out).not_to match(/#{row2.strip}/)
+          expect(row1_out.empty?).to be false
+          expect(row2_out.empty?).to be false
+        end
+
+        it 'does not obfuscate unspecified columns' do
+          header = "col1,col2\n"
+          row1col1 = "r1c1"
+          row1col2 = "r1c2"
+          row2col1 = "r2c1"
+          row2col2 = "r2c2"
+
+          string = header + "#{row1col1},#{row1col2}\n" + "#{row2col1},#{row2col2}\n"
+
+          input = StringIO.new(string)
+          output = StringIO.new
+          @ddo.obfuscate(input, output)
+          output.rewind
+
+          header_out, row1_out, row2_out = output.read.split
+          expect(header_out).to eq(header.strip)
+
+          [row1_out,row2_out].each_with_index do |row, i|
+            ridx = i+1
+            col1, col2 = row.split(',')
+            expect(col1).not_to match(eval("row#{ridx}col1"))
+            expect(col2).to eq(eval("row#{ridx}col2"))
+          end
+        end
+      end
+
+      context "when obfuscating a single column with matching enabled" do
+        before do
+          @ddo = MyObfuscate.new({
+            csv: {
+              "col1" => {:type => :string, :length => 8}
+            },
+            :column_mapper => {
+              "col1" => "col1"
+            }
+          })
+          @ddo.database_type = :csv
+        end
+
+        context
+        it 'replaces all instances of the value in the column with the obfuscated value' do
+          header = "col1\n"
+          rows = %w(id1 id2 id1).join("\n")
+          string = header + rows
+
+          input = StringIO.new(string)
+          output = StringIO.new
+          @ddo.obfuscate(input, output)
+          output.rewind
+          header_out, *rows_out = output.read.split
+          expect(rows_out.uniq.size).to eq(2)
+        end
+      end
+
+      context "when obfuscating multiple columns with matching enabled" do
+        before do
+          @ddo = MyObfuscate.new({
+            csv: {
+              "col1" => {:type => :string, :length => 8},
+              "col2" => {:type => :string, :length => 8}
+            },
+            :column_mapper => {
+              "col1" => "col2"
+            }
+          })
+          @ddo.database_type = :csv
+        end
+
+        context
+        it 'replaces all instances of the value in the column with the obfuscated value' do
+          header = "col1,col2\n"
+          rows = %w(id1,ref1 id2,ref2 id3,ref1).join("\n")
+          string = header + rows
+
+          input = StringIO.new(string)
+          output = StringIO.new
+          @ddo.obfuscate(input, output)
+          output.rewind
+          header_out, *rows_out = output.read.split
+          expect(rows_out.uniq.size).to eq(2)
+        end
+      end
+
+    end
   end
 
 end

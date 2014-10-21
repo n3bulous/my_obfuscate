@@ -6,7 +6,8 @@ require 'walker_method'
 # Class for obfuscating MySQL dumps. This can parse mysqldump outputs when using the -c option, which includes
 # column names in the insert statements.
 class MyObfuscate
-  attr_accessor :config, :globally_kept_columns, :fail_on_unspecified_columns, :database_type
+  attr_accessor :config, :globally_kept_columns, :fail_on_unspecified_columns, :database_type,
+                :csv_headers, :csv_col_sep, :csv_encoding
 
   NUMBER_CHARS = "1234567890"
   USERNAME_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_" + NUMBER_CHARS
@@ -16,6 +17,10 @@ class MyObfuscate
   # performed.  See the README.rdoc file for more information.
   def initialize(configuration = {})
     @config = configuration
+
+    @csv_headers = true
+    @csv_col_sep = ','
+    @csv_encoding = 'UTF-8'
   end
 
   def fail_on_unspecified_columns?
@@ -28,6 +33,8 @@ class MyObfuscate
         @database_helper = SqlServer.new
       elsif @database_type == :postgres
         @database_helper = Postgres.new
+      elsif @database_type == :csv
+        @database_helper = MyObfuscate::Csv.new
       else
         @database_helper = Mysql.new
       end
@@ -88,7 +95,6 @@ class MyObfuscate
       end
     end
   end
-
 end
 
 require 'my_obfuscate/copy_statement_parser'
@@ -96,4 +102,5 @@ require 'my_obfuscate/insert_statement_parser'
 require 'my_obfuscate/mysql'
 require 'my_obfuscate/sql_server'
 require 'my_obfuscate/postgres'
+require 'my_obfuscate/csv'
 require 'my_obfuscate/config_applicator'
