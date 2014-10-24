@@ -507,34 +507,20 @@ COPY some_table_to_keep (a, b) FROM stdin;
         end
       end
 
-      context "when obfuscating multiple columns with matching enabled" do
-        before do
-          @ddo = MyObfuscate.new({
-            csv: {
-              "col1" => {:type => :string, :length => 8},
-              "col2" => {:type => :string, :length => 8}
-            },
-            :column_mapper => {
-              "col1" => "col2"
-            }
-          })
-          @ddo.database_type = :csv
-        end
-
-        context
-        it 'replaces all instances of the value in the column with the obfuscated value' do
-          header = "col1,col2\n"
-          rows = %w(id1,ref1 id2,ref2 id3,ref1).join("\n")
-          string = header + rows
-
-          input = StringIO.new(string)
-          output = StringIO.new
-          @ddo.obfuscate(input, output)
-          output.rewind
-          header_out, *rows_out = output.read.split
-          expect(rows_out.uniq.size).to eq(2)
-        end
-      end
+      # context "when obfuscating multiple columns with matching enabled" do
+      #   before do
+      #     @ddo = MyObfuscate.new({
+      #       csv: {
+      #         "col1" => {:type => :string, :length => 8},
+      #         "col2" => {:type => :string, :length => 8}
+      #       },
+      #       :column_mapper => {
+      #         "col1" => "col2"
+      #       }
+      #     })
+      #     @ddo.database_type = :csv
+      #   end
+      # end
 
     end
   end

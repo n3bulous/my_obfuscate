@@ -32,7 +32,7 @@ class MyObfuscate
             md5 = Digest::MD5.hexdigest(rand.to_s)[0...5]
             clean_quotes("#{Faker::Internet.email}.#{md5}.example.com")
           when :string
-            random_string(definition[:length] || 30, definition[:chars] || SENSIBLE_CHARS)
+            random_string(definition[:length] || 30, definition[:chars] || SENSIBLE_CHARS, definition[:lpad_char] || nil)
           when :lorem
             clean_bad_whitespace(clean_quotes(Faker::Lorem.sentences(definition[:number] || 1).join(".  ")))
           when :like_english
@@ -105,11 +105,14 @@ class MyObfuscate
       (between.min + (between.max - between.min) * rand).round
     end
 
-    def self.random_string(length_or_range, chars)
+    def self.random_string(length_or_range, chars, lpad_char)
       length_or_range = (length_or_range..length_or_range) if length_or_range.is_a?(Fixnum)
       times = random_integer(length_or_range)
       out = ""
       times.times { out << chars[rand * chars.length] }
+
+      out = out.rjust(length_or_range.max, lpad_char) if lpad_char && length_or_range.is_a?(Range)
+
       out
     end
 
