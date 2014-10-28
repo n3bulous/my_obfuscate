@@ -502,25 +502,62 @@ COPY some_table_to_keep (a, b) FROM stdin;
           output = StringIO.new
           @ddo.obfuscate(input, output)
           output.rewind
+
           header_out, *rows_out = output.read.split
           expect(rows_out.uniq.size).to eq(2)
         end
       end
 
-      # context "when obfuscating multiple columns with matching enabled" do
-      #   before do
-      #     @ddo = MyObfuscate.new({
-      #       csv: {
-      #         "col1" => {:type => :string, :length => 8},
-      #         "col2" => {:type => :string, :length => 8}
-      #       },
-      #       :column_mapper => {
-      #         "col1" => "col2"
-      #       }
-      #     })
-      #     @ddo.database_type = :csv
-      #   end
-      # end
+      context "when obfuscating multiple columns with matching enabled" do
+        before do
+          @ddo = MyObfuscate.new({
+            csv: {
+              "col1" => {:type => :string, :length => 8},
+            },
+            :column_mapper => {
+              "col1" => "col2"
+            }
+          })
+          @ddo.database_type = :csv
+        end
+
+        it 'obfuscates the 2nd column when the source and target values are on the same row' do
+          header = "col1,col2,col3\n"
+          rows = %w(id1,id1,val1 id2,id2,val2 id3,id3,val3).join("\n")
+          string = header + rows
+
+          input = StringIO.new(string)
+          output = StringIO.new
+          @ddo.obfuscate(input, output)
+          output.rewind
+
+          header_out, *rows_out = output.read.split
+
+          rows_out.each do |str|
+            col1, col2 = str.split(',')
+            expect(col1).to eq(col2)
+          end
+        end
+
+        it 'obfuscates the 2nd column when the source and target values are on different rows' do
+          header = "col1,col2,col3\n"
+          rows = %w(id1,id1,val1 id2,id1,val2 id3,id1,val3).join("\n")
+          string = header + rows
+
+          input = StringIO.new(string)
+          output = StringIO.new
+          @ddo.obfuscate(input, output)
+          output.rewind
+
+          header_out, *rows_out = output.read.split
+
+          new_col1, new_col2 = rows_out[0].split(',')
+          rows_out.each do |str|
+            col1, col2 = str.split(',')
+            expect(new_col1).to eq(col2)
+          end
+        end
+      end
 
     end
   end

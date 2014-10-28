@@ -2,11 +2,21 @@ require 'csv'
 
 class MyObfuscate
   class Csv
+    def invert_column_map(column_mapper)
+      column_mapper.inject({}) do |memo, (k,v)|
+        v.is_a?(Array) ? v.map{|f| memo[f] = k} : memo[v] = k
+        memo[k] = k # auto maps itself
+        memo
+      end
+    end
+
     def parse(obfuscator, config, input_io, output_io)
-      @column_mapper = config[:column_mapper] || {}
+      column_mapper = config[:column_mapper] || {}
       config.delete(:column_mapper)
 
-      @column_data = @column_mapper.keys.inject({}) do |memo, k|
+      inverted_mapper = invert_column_map(column_mapper)
+
+      @column_data = column_mapper.keys.inject({}) do |memo, k|
         memo[k] = {}
         memo
       end
@@ -29,9 +39,9 @@ class MyObfuscate
             matched = {}
             old_values = {}
 
-            unless @column_mapper.empty?
+            unless column_mapper.empty?
               headers.each_with_index do |col, i|
-                if @column_mapper[col]
+                if column_mapper[col]
                   old_value = line[col]
                   if @column_data[col][old_value]
                     matched[i] = @column_data[col][old_value]
@@ -44,8 +54,18 @@ class MyObfuscate
 
             obfuscated = ConfigApplicator.apply_table_config(line.to_hash.values, table_config, headers)
 
+            # stores new data for successive rows
             old_values.each do |i, old_value|
-              @column_data[headers[i]][old_value] = obfuscated[i]
+              data_col = inverted_mapper[headers[i]]
+              @column_data[data_col][old_value] = obfuscated[i]
+            end
+
+            # Check to see if any dependent columns should be updated
+            unless inverted_mapper.empty?
+              headers.each_with_index do |col, i|
+                mapped_col = inverted_mapper[col]
+                matched[i] = @column_data[mapped_col][line[col]] if mapped_col
+              end
             end
 
             csv_out << obfuscated.each_with_index.to_h.invert.merge(matched).values
