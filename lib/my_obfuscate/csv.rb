@@ -64,11 +64,18 @@ class MyObfuscate
             unless inverted_mapper.empty?
               headers.each_with_index do |col, i|
                 mapped_col = inverted_mapper[col]
-                matched[i] = @column_data[mapped_col][line[col]] if mapped_col
+
+                if mapped_col
+                  replace_value = @column_data[mapped_col][line[col]]
+                  matched[i] = replace_value || obfuscated[i]
+                end
               end
             end
 
-            csv_out << obfuscated.each_with_index.to_h.invert.merge(matched).values
+            obfuscated_as_indexed_hash = {}
+            obfuscated.each_with_index {|v,i| obfuscated_as_indexed_hash[i] = v}
+
+            csv_out << obfuscated_as_indexed_hash.merge(matched).values
           end
         end
       end
