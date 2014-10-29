@@ -10,6 +10,20 @@ class MyObfuscate
       end
     end
 
+    def line_as_hash(line)
+      return line.to_h unless line.is_a?(Array)
+
+      line_as_hash = {}
+      line.each_with_index {|v,i| line_as_hash[i] = v}
+
+      line_as_hash
+    end
+
+    def headers_as_array(headers, line)
+      return headers if headers.is_a?(Array)
+      (0...line.size).inject([]) {|memo, i| memo << i}
+    end
+
     def parse(obfuscator, config, input_io, output_io)
       column_mapper = config[:column_mapper] || {}
       config.delete(:column_mapper)
@@ -21,8 +35,6 @@ class MyObfuscate
         memo
       end
 
-      raise "CSV files must have a header row" unless obfuscator.csv_headers
-
       table_config = config[:csv]
 
       CSV(output_io) do |csv_out|
@@ -30,10 +42,15 @@ class MyObfuscate
                       col_sep: obfuscator.csv_col_sep,
                       encoding: obfuscator.csv_encoding) do |csv_in|
 
-          headers_written = false
+          headers_written = false || !obfuscator.csv_headers
+
+          (0...obfuscator.csv_skip_lines).each { csv_in.shift }
+          (0...obfuscator.csv_output_lines_as_header).each { csv_out << csv_in.shift }
 
           csv_in.each do |line|
-            headers = csv_in.headers
+            line = line_as_hash(line)
+            headers = headers_as_array(csv_in.headers, line)
+
             (csv_out << headers and headers_written = true) unless headers_written
 
             matched = {}
@@ -52,7 +69,7 @@ class MyObfuscate
               end
             end
 
-            obfuscated = ConfigApplicator.apply_table_config(line.to_hash.values, table_config, headers)
+            obfuscated = ConfigApplicator.apply_table_config(line.values, table_config, headers)
 
             # stores new data for successive rows
             old_values.each do |i, old_value|

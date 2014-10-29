@@ -392,21 +392,6 @@ COPY some_table_to_keep (a, b) FROM stdin;
     end
 
     describe "when using CSV", focus: true do
-      context "when processing a csv file without a header row" do
-        it "aborts processing" do
-          ddo = MyObfuscate.new
-          ddo.database_type = :csv
-          ddo.csv_headers = false
-
-          string = "col1,col2,col3\n"
-          input = StringIO.new(string)
-          output = StringIO.new
-          expect {
-            ddo.obfuscate(input, output)
-          }.to raise_error(Exception)
-        end
-      end
-
       context "when there is nothing to obfuscate" do
         it "returns the input data" do
           ddo = MyObfuscate.new

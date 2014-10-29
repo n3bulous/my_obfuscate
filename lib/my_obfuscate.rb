@@ -7,7 +7,8 @@ require 'walker_method'
 # column names in the insert statements.
 class MyObfuscate
   attr_accessor :config, :globally_kept_columns, :fail_on_unspecified_columns, :database_type,
-                :csv_headers, :csv_col_sep, :csv_encoding
+                :csv_headers, :csv_col_sep, :csv_encoding, :csv_skip_lines,
+                :csv_output_lines_as_header
 
   NUMBER_CHARS = "1234567890"
   USERNAME_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_" + NUMBER_CHARS
@@ -21,6 +22,8 @@ class MyObfuscate
     @csv_headers = true
     @csv_col_sep = ','
     @csv_encoding = 'UTF-8'
+    @csv_skip_lines = 0
+    @csv_output_lines_as_header = 0
   end
 
   def fail_on_unspecified_columns?
