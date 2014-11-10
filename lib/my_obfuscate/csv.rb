@@ -37,7 +37,7 @@ class MyObfuscate
 
       table_config = config[:csv]
 
-      CSV(output_io) do |csv_out|
+      CSV(output_io, col_sep: obfuscator.csv_col_sep) do |csv_out|
         CSV(input_io, headers: obfuscator.csv_headers,
                       col_sep: obfuscator.csv_col_sep,
                       encoding: obfuscator.csv_encoding) do |csv_in|
