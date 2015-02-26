@@ -11,7 +11,7 @@ class MyObfuscate
     end
 
     def line_as_hash(line)
-      return line.to_h unless line.is_a?(Array)
+      return line.to_hash unless line.is_a?(Array)
 
       line_as_hash = {}
       line.each_with_index {|v,i| line_as_hash[i] = v}
